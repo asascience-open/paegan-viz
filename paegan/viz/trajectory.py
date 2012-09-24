@@ -7,11 +7,14 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 import subprocess
 import multiprocessing
+from paegan.transport.shoreline import Shoreline
+from shapely.geometry import Point
     
 class CFTrajectory(object):
     def __init__(self, filepath):
         self.nc = netCDF4.Dataset(filepath)
         self.path = filepath
+        
     def plot_summary(self, view=(25, -75), bathy="/media/sf_Python/paegan/paegan/resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"):
         fig = matplotlib.pyplot.figure()#figsize=(20,16)) # call a blank figure
         ax = fig.gca(projection='3d') # line with points
@@ -74,16 +77,29 @@ class CFTrajectory(object):
         #matplotlib.pyplot.show()
         fig.savefig('trajectory.png')
     
-    def plot_animate(self, output, view=(25, -75), bathy="/media/sf_Python/paegan/paegan/resources/bathymetry/ETOPO1_Bed_g_gmt4.grd",
-                     frame_prefix='_paegan'):
-        fig2 = matplotlib.pyplot.figure(figsize=(6,6)) # call a blank figure
-        #ax2 = fig2.gca(projection='3d') # line with points
-        #ax2 = fig2.add_axes(rect=(0,1,0,1), projection='3d')
-        ax2 = fig2.add_subplot(111, projection='3d')
-        visual_bbox = (self.nc.variables['lon'][:,0].min()-.15, self.nc.variables['lat'][:,0].min()-.15,
-                       self.nc.variables['lon'][:,0].max()+.15, self.nc.variables['lat'][:,0].max()+.15)#tracks.buffer(1).bounds
-                           
+    def plot_animate(self, output, view=(45, -75), bathy="/media/sf_Python/paegan/paegan/resources/bathymetry/ETOPO1_Bed_g_gmt4.grd",
+                     frame_prefix='_paegan', extent=None, stride=None):
+       
+        
+        if extent == None:
+            visual_bbox = (self.nc.variables['lon'][:,0].min()-.6, self.nc.variables['lat'][:,0].min()-.75,
+                           self.nc.variables['lon'][:,0].max()+.6, self.nc.variables['lat'][:,0].max()+.75)#tracks.buffer(1).bounds
+        else:
+            visual_bbox = extent
+            
+        pt = Point(((visual_bbox[2]-visual_bbox[0])/2)+visual_bbox[0],((visual_bbox[3]-visual_bbox[1])/2)+visual_bbox[1])
+        coast_line = Shoreline(point=pt, spatialbuffer=1.5).linestring
+        c_lons, c_lats = coast_line.xy
+        c_lons = np.array(c_lons)
+        c_lats = np.array(c_lats)
+        c_lons = np.where((c_lons >= visual_bbox[0]) & (c_lons <= visual_bbox[2]), c_lons, np.nan)
+        c_lats = np.where((c_lats >= visual_bbox[1]) & (c_lats <= visual_bbox[3]), c_lats, np.nan)               
         #add bathymetry
+        if stride == None:
+            if visual_bbox[2] - visual_bbox[0] < 1.5:
+                stride = 1
+            else:
+                stride = 1#2
         nc1 = netCDF4.Dataset(os.path.normpath(bathy))
         x = nc1.variables['x']
         y = nc1.variables['y']
@@ -99,30 +115,39 @@ class CFTrajectory(object):
         lons = x[x_min:x_max]
         lats = y[y_min:y_max]
         bath = nc1.variables['z'][y_min:y_max,x_min:x_max]
-
+        bath[bath>0] = 0
+        #bath = bath.astype(np.float32)
+        bath[bath<-800] = -800#np.nan
         x_grid, y_grid = np.meshgrid(lons, lats)
 
         mpl_extent = matplotlib.transforms.Bbox.from_extents(visual_bbox[0],visual_bbox[1],visual_bbox[2],visual_bbox[3])
             
-        CNorm = matplotlib.colors.Normalize(vmin=-200,
+        CNorm = matplotlib.colors.Normalize(vmin=-400,
                                             vmax=300,
                                             )
-                                            
+        '''                                   
         #bath[bath>0] = np.log(bath[bath>0]) * 10                                  
-        s = ax2.plot_surface(x_grid, y_grid, bath, rstride=1, cstride=1,
-                cmap="gist_earth",  linewidth=0, antialiased=False,
-                norm=CNorm, shade=True, edgecolor='.2')
+        s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
+                cmap="Blues_r",  linewidth=.01, antialiased=False,
+                norm=CNorm, shade=True, edgecolor='#6183A6')
                 
         ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
         ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
         ax2.view_init(*view)
         
-        ax2.set_zmargin(1)
-        #ax2.set_xlabel('Longitude')
-        #ax2.set_ylabel('Latitude')
-        #ax2.set_zlabel('Depth (m)')
+        #ax2.set_zmargin(50)
+        ax2.set_xlabel('Longitude')
+        ax2.set_ylabel('Latitude')
+        ax2.set_zlabel('Depth (m)')
         #ax2.set_frame_on(False)
         #ax2.set_position([0,0,1,1])
+        ax2.xaxis.set_ticklabels([])
+        ax2.yaxis.set_ticklabels([])
+        ax2.zaxis.set_ticklabels(['Surface'])
+        ax2.zaxis.set_ticks([0])
+        ax2.grid(False)
+        #ax2.set_zlim(-200, 100)
+        '''
         fname = []
         p_proj_lons = []
         p_proj_lats = []
@@ -131,32 +156,70 @@ class CFTrajectory(object):
         lat = self.nc.variables['lat'][:,:]
         lon = self.nc.variables['lon'][:,:]
         depth = self.nc.variables['depth'][:,:]
-        def create_image(ax2, i, lat, lon, depth, prefix, c):
+        def create_image(ax2, ax3, i, lat, lon, depth, prefix, c):
             for q in [0,1]:
                 fname.append('%s%04d.png' % (frame_prefix, c))
-                
                 for j in range(self.nc.variables['particle'].shape[0]):
-                    line, = ax2.plot(lon[:i+1,j],
-                             lat[:i+1,j],
-                             depth[:i+1,j], ':', c='gray',
-                             linewidth=.5, markersize=5, markerfacecolor='r',) # each particle)
+                    line, = ax2.plot(lon[i:i+3,j],
+                                     lat[i:i+3,j],
+                                     depth[i:i+3,j], ':', c='r',
+                                     linewidth=3, markersize=5, markerfacecolor='r',) # each particle)
+                    #line, = ax2.plot(lon[i:i+1,j],
+                    #                 lat[i:i+1,j],
+                    #                 depth[i:i+1,j], ':', c='g',
+                    #                 linewidth=.5, markersize=5, markerfacecolor='r',) # each particle)
+                    ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
+                         linewidth=.5, markersize=5, markerfacecolor='r',)
+                    ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
                     line.set_markevery((i-3,1))
-                #ax2.set_zlim3d(-200,0)
-                fig2.savefig(fname[c], dpi=100, bbox_inches='tight')
-                c += 1
+                #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
+                ax2.set_zlim3d(-800,25)
                 
+                fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
+                c += 1
             return c
             
         p = []
         c = 0
-        for i in range(self.nc.variables['time'].shape[0]):
-            c = create_image(ax2, i, lat, lon, depth, frame_prefix, c)
+        for i in range(self.nc.variables['time'].shape[0])[:-4:2]:
+            fig2 = matplotlib.pyplot.figure(figsize=(12,6))
+            ax2 = fig2.add_subplot(111, projection='3d')
+            ax3 = fig2.add_axes([.75, .1, .15, .3])
+            subbox = visual_bbox#(self.nc.variables['lon'][:,0].min(), self.nc.variables['lat'][:,0].min(),
+                     #self.nc.variables['lon'][:,0].max(), self.nc.variables['lat'][:,0].max())
+            ax3.plot(c_lons, c_lats, clip_box=mpl_extent, clip_on=True, color='c') # shoreline
+            ax3.set_xlim(subbox[0],subbox[2])
+            ax3.set_ylim(subbox[1],subbox[3])
+            #ax3.pcolor(x_grid, y_grid, bath, cmap="Blues_r", norm=CNorm)
+            s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
+                cmap="Blues_r",  linewidth=0.01, antialiased=False,
+                norm=CNorm, shade=True, edgecolor='#6183A6')
+            ax2.plot(c_lons, c_lats, np.zeros_like(c_lons))
             
-            #p.append(multiprocessing.Process(target=create_image, args=(ax2, i, fname[i], lat, lon, depth)))
-            #p[i].start()
-        #[proc.join() for proc in p]
             
-        save_animation(output, fname, frame_prefix='_paegan')
+            ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
+            ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
+            ax2.view_init(*view)
+            
+            #ax2.set_zmargin(50)
+            ax3.set_xlabel('Longitude')
+            ax3.set_ylabel('Latitude')
+            ax3.yaxis.set_ticks_position('right')
+            ax3.ticklabel_format(axis='x', style='plain')
+            ax3.tick_params(axis='both', which='major', labelsize=10)
+
+            ax2.set_zlabel('Depth (m)')
+            #ax2.set_frame_on(False)
+            #ax2.set_position([0,0,1,1])
+            ax2.xaxis.set_ticklabels([])
+            ax2.yaxis.set_ticklabels([])
+            #ax2.zaxis.set_ticklabels(['Surface'])
+            ax2.zaxis.set_ticks([0])
+            ax2.grid(False)
+            #ax2.set_zlim(-200, 100)
+            c = create_image(ax2, ax3, i, lat, lon, depth, frame_prefix, c)
+  
+        save_animation(output, fname, frame_prefix=frame_prefix)
         
 def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
     frame_prefix='_tmp'):
@@ -181,13 +244,14 @@ def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
     #    '%s%%04d.png' % frame_prefix, filename]
     
     command = ('mencoder',
-               'mf://*.png',
+               'mf://%s*.png'%frame_prefix,
                '-mf',
-               'type=png:w=400:h=400:fps='+str(fps),
+               'type=png:w=600:h=300:fps='+str(fps),
                '-ovc',
                'lavc',
                '-lavcopts',
-               'vcodec=mpeg4',
+               #'vcodec=mpeg4',
+               'vcodec=msmpeg4v2:vbitrate=1000', 
                '-oac',
                'copy',
                '-o',

@@ -11,7 +11,8 @@ def progressive_vectors(time, U, V, save=None, axes=None, **kwargs):
     else:
         ax = axes
     #print time.shape, U.shape, V.shape, np.zeros_like(U).shape
-    handle = ax.quiver(range(169), np.zeros_like(U), U, V,pivot='tail', **kwargs)
+    handle = ax.quiver(time, np.zeros_like(U), U, V,
+                       pivot='tail', **kwargs)
     
     if save == None:
         pass
