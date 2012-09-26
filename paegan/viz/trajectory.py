@@ -169,7 +169,9 @@ class CFTrajectory(object):
                     ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
                     ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
                     ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
-                    if i >= 3:
+                    if i == 2:
+                        ax4.set_xlim(i-2,i+2.25)
+                    elif i >= 3:
                         ax4.set_xlim(i-3,i+2.25)
                     else:
                         ax4.set_xlim(i,i+2.25)
@@ -230,7 +232,7 @@ class CFTrajectory(object):
             ax2.grid(False)
             #ax2.set_zlim(-200, 100)
             c = create_image(ax2, ax3, ax4,  i, lat, lon, depth, frame_prefix, c)
-        fig2,ax2,ax3,ax4 = None, None, None, None
+            del fig2, ax2, ax3, ax4
         save_animation(output, fname, frame_prefix=frame_prefix)
         
 def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
