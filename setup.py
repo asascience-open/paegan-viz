@@ -16,7 +16,7 @@ class PyTest(Command):
         raise SystemExit(errno)
 
 setup(name              = "paegan-viz",
-    version             = "0.1.0",
+    version             = "0.1.1",
     description         = "Visualization packages for the Paegan library",
     long_description    = readme,
     license             = 'LICENSE.txt',
