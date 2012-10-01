@@ -232,7 +232,7 @@ class CFTrajectory(object):
             ax2.grid(False)
             #ax2.set_zlim(-200, 100)
             c = create_image(ax2, ax3, ax4,  i, lat, lon, depth, frame_prefix, c)
-            del fig2, ax2, ax3, ax4
+
         save_animation(output, fname, frame_prefix=frame_prefix)
         
 def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
