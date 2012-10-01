@@ -1,0 +1,7 @@
+*.pyc
+*sublime*
+
+# For distutils
+paegan_viz.egg-info/*
+dist/*
+build/*
