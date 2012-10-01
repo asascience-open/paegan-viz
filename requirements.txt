@@ -1,4 +1,4 @@
 netCDF4==0.9.8
 matplotlib==1.1.0
-git+https://github.com/asascience-open/paegan.git@master#egg=paegan
-git+https://github.com/matplotlib/basemap.git@1.0.5#egg=basemap
+paegan==0.9.0
+basemap
