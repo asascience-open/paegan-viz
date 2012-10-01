@@ -15,7 +15,8 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py'])
         raise SystemExit(errno)
 
-setup(name              = "paegan-viz",
+setup(namespace_packages = ['paegan'],
+    name                = "paegan-viz",
     version             = "0.1.1",
     description         = "Visualization packages for the Paegan library",
     long_description    = readme,
