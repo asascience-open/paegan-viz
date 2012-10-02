@@ -9,6 +9,8 @@ import subprocess
 import multiprocessing
 from paegan.transport.shoreline import Shoreline
 from shapely.geometry import Point
+from cv2 import VideoWriter, imread
+import cv
     
 class CFTrajectory(object):
     def __init__(self, filepath):
@@ -233,14 +235,16 @@ class CFTrajectory(object):
             #ax2.set_zlim(-200, 100)
             c = create_image(ax2, ax3, ax4,  i, lat, lon, depth, frame_prefix, c)
 
-        save_animation(output, fname, frame_prefix=frame_prefix)
+        return save_animation(output, fname, frame_prefix=frame_prefix)
         
-def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
-    frame_prefix='_tmp'):
+def save_animation(filename, files, fps=10, codec=None, clear_temp=True, frame_prefix='_tmp'):
+
     '''
     Saves a movie file by drawing every frame.
 
-    *filename* is the output filename, eg :file:`mymovie.mp4`
+    *filename* is the absolute path to the output filename, eg :file:`mymovie.mp4`
+
+    *files* is a list of files to add to the movie
 
     *fps* is the frames per second in the movie
 
@@ -248,35 +252,36 @@ def save_animation(filename, fnames, fps=10, codec='mpeg4', clear_temp=True,
 
     *clear_temp* specifies whether the temporary image files should be
     deleted.
-
-    *frame_prefix* gives the prefix that should be used for individual
-    image files.  This prefix will have a frame number (i.e. 0001) appended
-    when saving individual frames.
     '''
-    from subprocess import Popen, PIPE
-    #command = ['ffmpeg', '-y', '-r', str(fps), '-b', '1800k', '-i',
-    #    '%s%%04d.png' % frame_prefix, filename]
-    
-    command = ('mencoder',
-               'mf://%s*.png'%frame_prefix,
-               '-mf',
-               'type=png:w=600:h=300:fps='+str(fps),
-               '-ovc',
-               'lavc',
-               '-lavcopts',
-               #'vcodec=mpeg4',
-               'vcodec=msmpeg4v2:vbitrate=1000', 
-               '-oac',
-               'copy',
-               '-o',
-               filename)
-    proc = Popen(command, shell=False,
-        stdout=PIPE, stderr=PIPE)
-    proc.wait()
 
-    
-    #Delete temporary files
-    if clear_temp:
-        for fname in fnames:
-            os.remove(fname)
-    
+    if len(files) > 0:
+
+        fps = max(fps,10)
+
+        if codec is None:
+            #codec = cv.CV_FOURCC('D','I','B',' ')
+            #codec = cv.CV_FOURCC('D','I','V','X')
+            codec = cv.CV_FOURCC('X','V','I','D')
+            #codec = cv.CV_FOURCC('X','2','6','4')
+
+        # To get correct width and height for video
+        height,width,bands = imread(files[0]).shape
+        vw = VideoWriter(filename, codec, fps, (width, height), True)
+
+        if vw is None:
+            print "Error creating video writer"
+
+        for fname in files:
+            #print fname
+
+            # 2.0
+            ig = imread(fname)
+            vw.write(ig)
+
+            if clear_temp:
+                os.remove(fname)
+
+        del vw
+        return True
+
+    return False
