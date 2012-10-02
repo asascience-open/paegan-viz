@@ -82,7 +82,6 @@ class CFTrajectory(object):
     def plot_animate(self, output, view=(45, -75), bathy=os.path.join(__file__,"../../resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"),
                      frame_prefix='_paegan', extent=None, stride=None):
        
-        
         if extent == None:
             visual_bbox = (self.nc.variables['lon'][:,0].min()-.6, self.nc.variables['lat'][:,0].min()-.75,
                            self.nc.variables['lon'][:,0].max()+.6, self.nc.variables['lat'][:,0].max()+.75)#tracks.buffer(1).bounds
@@ -158,6 +157,7 @@ class CFTrajectory(object):
         lon = self.nc.variables['lon'][:,:]
         depth = self.nc.variables['depth'][:,:]
         time = netCDF4.num2date(self.nc.variables['time'][:], self.nc.variables['time'].units)
+
         def create_image(ax2, ax3, ax4, i, lat, lon, depth, prefix, c):
             for q in [0,1]:
                 fname.append('%s%04d.png' % (frame_prefix, c))
@@ -208,7 +208,7 @@ class CFTrajectory(object):
             ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
             ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
             ax2.view_init(*view)
-            datetimeformat = '%y/%m/%d %H:%M'
+            datetimeformat = '%m/%d/%Y %H:%M'
             ax2.set_title(time[i].strftime(datetimeformat) + " - " + time[i+2].strftime(datetimeformat))
             #ax2.set_zmargin(50)
             ax3.set_xlabel('Longitude')
