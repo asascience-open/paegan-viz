@@ -159,30 +159,29 @@ class CFTrajectory(object):
         time = netCDF4.num2date(self.nc.variables['time'][:], self.nc.variables['time'].units)
 
         def create_image(ax2, ax3, ax4, i, lat, lon, depth, prefix, c):
-            for q in [0,1]:
-                fname.append('%s%04d.png' % (frame_prefix, c))
-                for j in range(self.nc.variables['particle'].shape[0]):
-                    line, = ax2.plot(lon[i:i+3,j],
-                                     lat[i:i+3,j],
-                                     depth[i:i+3,j], ':', c='r',
-                                     linewidth=2, markersize=5, markerfacecolor='r',) # each particle)
-                    ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
-                         linewidth=.5, markersize=5, markerfacecolor='r',)
-                    ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
-                    ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
-                    ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
-                    if i == 2:
-                        ax4.set_xlim(i-2,i+2.25)
-                    elif i >= 3:
-                        ax4.set_xlim(i-3,i+2.25)
-                    else:
-                        ax4.set_xlim(i,i+2.25)
-                    line.set_markevery((i-3,1))
-                #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
-                ax2.set_zlim3d(-800,25)
-                
-                fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
-                c += 1
+            fname.append('%s%04d.png' % (frame_prefix, c))
+            for j in range(self.nc.variables['particle'].shape[0]):
+                line, = ax2.plot(lon[i:i+3,j],
+                                 lat[i:i+3,j],
+                                 depth[i:i+3,j], ':', c='r',
+                                 linewidth=2, markersize=5, markerfacecolor='r',) # each particle)
+                ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
+                     linewidth=.5, markersize=5, markerfacecolor='r',)
+                ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
+                ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
+                ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
+                if i == 2:
+                    ax4.set_xlim(i-2,i+2.25)
+                elif i >= 3:
+                    ax4.set_xlim(i-3,i+2.25)
+                else:
+                    ax4.set_xlim(i,i+2.25)
+                line.set_markevery((i-3,1))
+            #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
+            ax2.set_zlim3d(-800,25)
+            
+            fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
+            c += 1
             return c
             
         p = []
