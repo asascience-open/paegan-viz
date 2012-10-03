@@ -1,6 +1,8 @@
 *.pyc
 *sublime*
 
+tests/output/*
+
 # For distutils
 paegan_viz.egg-info/*
 dist/*
