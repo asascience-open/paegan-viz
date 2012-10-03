@@ -207,7 +207,7 @@ class CFTrajectory(object):
             ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
             ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
             ax2.view_init(*view)
-            datetimeformat = '%m/%d/%Y %H:%M'
+            datetimeformat = '%Y-%m-%d %H:%M'
             ax2.set_title(time[i].strftime(datetimeformat) + " - " + time[i+2].strftime(datetimeformat))
             #ax2.set_zmargin(50)
             ax3.set_xlabel('Longitude')
