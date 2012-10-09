@@ -10,7 +10,12 @@ import multiprocessing
 from paegan.transport.shoreline import Shoreline
 from shapely.geometry import Point
 from cv2 import VideoWriter, imread
-import cv
+from cv import CV_FOURCC
+#import gc
+#gc.set_debug(gc.DEBUG_UNCOLLECTABLE)
+
+#from matplotlib import cbook
+#cbook.print_cycles(gc.garbage)
     
 class CFTrajectory(object):
     def __init__(self, filepath):
@@ -79,9 +84,12 @@ class CFTrajectory(object):
         #matplotlib.pyplot.show()
         fig.savefig('trajectory.png')
     
-    def plot_animate(self, output, view=(45, -75), bathy=os.path.join(__file__,"../../resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"),
+    def plot_animate(self, output, temp_folder=None, view=(45, -75), bathy=os.path.join(__file__,"../../resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"),
                      frame_prefix='_paegan', extent=None, stride=None):
        
+        if temp_folder == None:
+            temp_folder = os.path.dirname(output)
+
         if extent == None:
             visual_bbox = (self.nc.variables['lon'][:,0].min()-.6, self.nc.variables['lat'][:,0].min()-.75,
                            self.nc.variables['lon'][:,0].max()+.6, self.nc.variables['lat'][:,0].max()+.75)#tracks.buffer(1).bounds
@@ -157,33 +165,9 @@ class CFTrajectory(object):
         lon = self.nc.variables['lon'][:,:]
         depth = self.nc.variables['depth'][:,:]
         time = netCDF4.num2date(self.nc.variables['time'][:], self.nc.variables['time'].units)
+            
+        datetimeformat = '%Y-%m-%d %H:%M'
 
-        def create_image(ax2, ax3, ax4, i, lat, lon, depth, prefix, c):
-            fname.append('%s%04d.png' % (frame_prefix, c))
-            for j in range(self.nc.variables['particle'].shape[0]):
-                line, = ax2.plot(lon[i:i+3,j],
-                                 lat[i:i+3,j],
-                                 depth[i:i+3,j], ':', c='r',
-                                 linewidth=2, markersize=5, markerfacecolor='r',) # each particle)
-                ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
-                     linewidth=.5, markersize=5, markerfacecolor='r',)
-                ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
-                ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
-                ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
-                if i == 2:
-                    ax4.set_xlim(i-2,i+2.25)
-                elif i >= 3:
-                    ax4.set_xlim(i-3,i+2.25)
-                else:
-                    ax4.set_xlim(i,i+2.25)
-                line.set_markevery((i-3,1))
-            #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
-            ax2.set_zlim3d(-800,25)
-            
-            fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
-            c += 1
-            return c
-            
         p = []
         c = 0
         for i in range(self.nc.variables['time'].shape[0])[:-4:2]:
@@ -203,11 +187,10 @@ class CFTrajectory(object):
                 norm=CNorm, shade=True, edgecolor='#6183A6')
             ax2.plot(c_lons, c_lats, np.zeros_like(c_lons))
             
-            
             ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
             ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
             ax2.view_init(*view)
-            datetimeformat = '%Y-%m-%d %H:%M'
+            
             ax2.set_title(time[i].strftime(datetimeformat) + " - " + time[i+2].strftime(datetimeformat))
             #ax2.set_zmargin(50)
             ax3.set_xlabel('Longitude')
@@ -232,7 +215,28 @@ class CFTrajectory(object):
             ax2.zaxis.set_ticks(range(-800,100,200))
             ax2.grid(False)
             #ax2.set_zlim(-200, 100)
-            c = create_image(ax2, ax3, ax4,  i, lat, lon, depth, frame_prefix, c)
+
+            # Create image
+            for j in range(self.nc.variables['particle'].shape[0]):
+                ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
+                     linewidth=.5, markersize=5, markerfacecolor='r',)
+                ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
+                ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
+                ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
+                if i == 2:
+                    ax4.set_xlim(i-2,i+2.25)
+                elif i >= 3:
+                    ax4.set_xlim(i-3,i+2.25)
+                else:
+                    ax4.set_xlim(i,i+2.25)
+            #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
+            ax2.set_zlim3d(-800,25)
+            
+            fname.append(os.path.join(temp_folder,'%s%04d.png' % (frame_prefix, c)))
+            fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
+            c += 1
+
+            del ax2, ax3, ax4, subbox, fig2, s
 
         return save_animation(output, fname, frame_prefix=frame_prefix)
         
@@ -252,16 +256,15 @@ def save_animation(filename, files, fps=10, codec=None, clear_temp=True, frame_p
     *clear_temp* specifies whether the temporary image files should be
     deleted.
     '''
-
     if len(files) > 0:
 
         fps = max(fps,10)
 
         if codec is None:
-            #codec = cv.CV_FOURCC('D','I','B',' ')
-            #codec = cv.CV_FOURCC('D','I','V','X')
-            codec = cv.CV_FOURCC('X','V','I','D')
-            #codec = cv.CV_FOURCC('X','2','6','4')
+            #codec = CV_FOURCC('D','I','B',' ')
+            #codec = CV_FOURCC('D','I','V','X')
+            codec = CV_FOURCC('X','V','I','D')
+            #codec = CV_FOURCC('X','2','6','4')
 
         # To get correct width and height for video
         height,width,bands = imread(files[0]).shape
@@ -271,10 +274,10 @@ def save_animation(filename, files, fps=10, codec=None, clear_temp=True, frame_p
             print "Error creating video writer"
 
         for fname in files:
-            #print fname
 
             # 2.0
             ig = imread(fname)
+            vw.write(ig)
             vw.write(ig)
 
             if clear_temp:
