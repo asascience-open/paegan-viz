@@ -170,74 +170,99 @@ class CFTrajectory(object):
 
         p = []
         c = 0
+        length = self.nc.variables['particle'].shape[0]
+            
+        def render_frame(visual_bbox, c_lons, c_lat, mpl_extent, 
+                         x_grid, y_grid, bath, stride, view,
+                         length, lat, lon, depth, temp_folder,
+                         frame_prefix, c, s):
+            import numpy as np
+            import netCDF4, sys, os
+            import matplotlib
+            import matplotlib.pyplot
+            from matplotlib import cm, animation
+            from mpl_toolkits.mplot3d import Axes3D
+            from matplotlib.ticker import MultipleLocator
+            with s:
+                fig2 = matplotlib.pyplot.figure(figsize=(12,6))
+                ax2 = fig2.add_subplot(111, projection='3d')
+                ax3 = fig2.add_axes([.75, .1, .15, .3])
+                ax4 = fig2.add_axes([.2, .1, .15, .3])
+                subbox = visual_bbox#(self.nc.variables['lon'][:,0].min(), self.nc.variables['lat'][:,0].min(),
+                         #self.nc.variables['lon'][:,0].max(), self.nc.variables['lat'][:,0].max())
+                ax3.plot(c_lons, c_lats, clip_box=mpl_extent, clip_on=True, color='c') # shoreline
+               
+                ax3.set_xlim(subbox[0],subbox[2])
+                ax3.set_ylim(subbox[1],subbox[3])
+                #ax3.pcolor(x_grid, y_grid, bath, cmap="Blues_r", norm=CNorm)
+                s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
+                    cmap="Blues_r",  linewidth=0.01, antialiased=False,
+                    norm=CNorm, shade=True, edgecolor='#6183A6')
+                ax2.plot(c_lons, c_lats, np.zeros_like(c_lons))
+                
+                ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
+                ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
+                ax2.view_init(*view)
+                
+                ax2.set_title(time[i].strftime(datetimeformat) + " - " + time[i+2].strftime(datetimeformat))
+                #ax2.set_zmargin(50)
+                ax3.set_xlabel('Longitude')
+                ax3.set_ylabel('Latitude')
+                ax3.tick_params(axis='both', which='major', labelsize=10)
+                ax3.yaxis.set_ticks_position('right')
+                ax3.ticklabel_format(axis='x', style='plain')
+                ax3.xaxis.set_major_locator(MultipleLocator(.5))
+                ax3.grid(True)
+                ax4.set_ylabel('Depth (m)')
+                ax4.set_ylim(-200, 0)
+                ax4.tick_params(axis='x', which='major', labelsize=10)
+                #ax4.set_xlim(1,3)
+                ax4.xaxis.set_ticklabels([])
+                #ax3.xaxis.set_ticklabels(np.unique(c_lons.astype(int)))
+                ax2.set_zlabel('Depth (m)')
+                #ax2.set_frame_on(False)
+                #ax2.set_position([0,0,1,1])
+                ax2.xaxis.set_ticklabels([])
+                ax2.yaxis.set_ticklabels([])
+                #ax2.zaxis.set_ticklabels(['Surface'])
+                ax2.zaxis.set_ticks(range(-800,100,200))
+                ax2.grid(False)
+                #ax2.set_zlim(-200, 100)
+
+                # Create image
+                for j in range(length):#self.nc.variables['particle'].shape[0]):
+                    ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
+                         linewidth=.5, markersize=5, markerfacecolor='r',)
+                    ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
+                    ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
+                    ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
+                    if i == 2:
+                        ax4.set_xlim(i-2,i+2.25)
+                    elif i >= 3:
+                        ax4.set_xlim(i-3,i+2.25)
+                    else:
+                        ax4.set_xlim(i,i+2.25)
+                #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
+                ax2.set_zlim3d(-800,25)
+                
+                fname.append(os.path.join(temp_folder,'%s%04d.png' % (frame_prefix, c)))
+                fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
+                #c += 1
+
+                del ax2, ax3, ax4, subbox, fig2, s
+        
+        jobs = []
+        s = multiprocessing.Semaphore(multiprocessing.cpu_count())
         for i in range(self.nc.variables['time'].shape[0])[:-4:2]:
-            fig2 = matplotlib.pyplot.figure(figsize=(12,6))
-            ax2 = fig2.add_subplot(111, projection='3d')
-            ax3 = fig2.add_axes([.75, .1, .15, .3])
-            ax4 = fig2.add_axes([.2, .1, .15, .3])
-            subbox = visual_bbox#(self.nc.variables['lon'][:,0].min(), self.nc.variables['lat'][:,0].min(),
-                     #self.nc.variables['lon'][:,0].max(), self.nc.variables['lat'][:,0].max())
-            ax3.plot(c_lons, c_lats, clip_box=mpl_extent, clip_on=True, color='c') # shoreline
-           
-            ax3.set_xlim(subbox[0],subbox[2])
-            ax3.set_ylim(subbox[1],subbox[3])
-            #ax3.pcolor(x_grid, y_grid, bath, cmap="Blues_r", norm=CNorm)
-            s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
-                cmap="Blues_r",  linewidth=0.01, antialiased=False,
-                norm=CNorm, shade=True, edgecolor='#6183A6')
-            ax2.plot(c_lons, c_lats, np.zeros_like(c_lons))
-            
-            ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
-            ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
-            ax2.view_init(*view)
-            
-            ax2.set_title(time[i].strftime(datetimeformat) + " - " + time[i+2].strftime(datetimeformat))
-            #ax2.set_zmargin(50)
-            ax3.set_xlabel('Longitude')
-            ax3.set_ylabel('Latitude')
-            ax3.tick_params(axis='both', which='major', labelsize=10)
-            ax3.yaxis.set_ticks_position('right')
-            ax3.ticklabel_format(axis='x', style='plain')
-            ax3.xaxis.set_major_locator(MultipleLocator(.5))
-            ax3.grid(True)
-            ax4.set_ylabel('Depth (m)')
-            ax4.set_ylim(-200, 0)
-            ax4.tick_params(axis='x', which='major', labelsize=10)
-            #ax4.set_xlim(1,3)
-            ax4.xaxis.set_ticklabels([])
-            #ax3.xaxis.set_ticklabels(np.unique(c_lons.astype(int)))
-            ax2.set_zlabel('Depth (m)')
-            #ax2.set_frame_on(False)
-            #ax2.set_position([0,0,1,1])
-            ax2.xaxis.set_ticklabels([])
-            ax2.yaxis.set_ticklabels([])
-            #ax2.zaxis.set_ticklabels(['Surface'])
-            ax2.zaxis.set_ticks(range(-800,100,200))
-            ax2.grid(False)
-            #ax2.set_zlim(-200, 100)
-
-            # Create image
-            for j in range(self.nc.variables['particle'].shape[0]):
-                ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
-                     linewidth=.5, markersize=5, markerfacecolor='r',)
-                ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
-                ax4.plot(range(i+3), depth[:i+3,j], c='r', linewidth=.5, aa=True)
-                ax4.scatter(np.ones_like(depth[i+2,j])*(i+2), depth[i+2,j], c='r')
-                if i == 2:
-                    ax4.set_xlim(i-2,i+2.25)
-                elif i >= 3:
-                    ax4.set_xlim(i-3,i+2.25)
-                else:
-                    ax4.set_xlim(i,i+2.25)
-            #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
-            ax2.set_zlim3d(-800,25)
-            
-            fname.append(os.path.join(temp_folder,'%s%04d.png' % (frame_prefix, c)))
-            fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
+            p = multiprocessing.Process(target=render_frame, args=(visual_bbox, c_lons, c_lat, mpl_extent, 
+                                                                   x_grid, y_grid, bath, stride, view,
+                                                                   length, lat, lon, depth, temp_folder,
+                                                                   frame_prefix, c, s)
+                                       )
+            p.start()
+            jobs.append(p)
             c += 1
-
-            del ax2, ax3, ax4, subbox, fig2, s
-
+        
         return save_animation(output, fname, frame_prefix=frame_prefix)
         
 def save_animation(filename, files, fps=10, codec=None, clear_temp=True, frame_prefix='_tmp'):
