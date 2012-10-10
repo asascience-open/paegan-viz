@@ -17,6 +17,8 @@ from cv import CV_FOURCC
 #from matplotlib import cbook
 #cbook.print_cycles(gc.garbage)
     
+s = multiprocessing.Semaphore(multiprocessing.cpu_count())
+    
 class CFTrajectory(object):
     def __init__(self, filepath):
         self.nc = netCDF4.Dataset(filepath)
@@ -252,7 +254,6 @@ class CFTrajectory(object):
                 del ax2, ax3, ax4, subbox, fig2, s
         
         jobs = []
-        s = multiprocessing.Semaphore(multiprocessing.cpu_count())
         for i in range(self.nc.variables['time'].shape[0])[:-4:2]:
             p = multiprocessing.Process(target=render_frame, args=(visual_bbox, c_lons, c_lat, mpl_extent, 
                                                                    x_grid, y_grid, bath, stride, view,
