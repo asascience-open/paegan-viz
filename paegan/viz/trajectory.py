@@ -11,13 +11,8 @@ from paegan.transport.shoreline import Shoreline
 from shapely.geometry import Point
 from cv2 import VideoWriter, imread
 from cv import CV_FOURCC
-#import gc
-#gc.set_debug(gc.DEBUG_UNCOLLECTABLE)
-
-#from matplotlib import cbook
-#cbook.print_cycles(gc.garbage)
     
-s = multiprocessing.Semaphore(multiprocessing.cpu_count())
+semo = multiprocessing.Semaphore(multiprocessing.cpu_count() - 1)
     
 class CFTrajectory(object):
     def __init__(self, filepath):
@@ -158,7 +153,9 @@ class CFTrajectory(object):
         ax2.grid(False)
         #ax2.set_zlim(-200, 100)
         '''
-        fname = []
+        mgr = multiprocessing.Manager()
+        fname = mgr.list()
+
         p_proj_lons = []
         p_proj_lats = []
         p_proj_depth = []
@@ -177,7 +174,7 @@ class CFTrajectory(object):
         def render_frame(visual_bbox, c_lons, c_lat, mpl_extent, 
                          x_grid, y_grid, bath, stride, view,
                          length, lat, lon, depth, temp_folder,
-                         frame_prefix, c, s):
+                         frame_prefix, c, semo):
             import numpy as np
             import netCDF4, sys, os
             import matplotlib
@@ -185,7 +182,7 @@ class CFTrajectory(object):
             from matplotlib import cm, animation
             from mpl_toolkits.mplot3d import Axes3D
             from matplotlib.ticker import MultipleLocator
-            with s:
+            with semo:
                 fig2 = matplotlib.pyplot.figure(figsize=(12,6))
                 ax2 = fig2.add_subplot(111, projection='3d')
                 ax3 = fig2.add_axes([.75, .1, .15, .3])
@@ -197,9 +194,11 @@ class CFTrajectory(object):
                 ax3.set_xlim(subbox[0],subbox[2])
                 ax3.set_ylim(subbox[1],subbox[3])
                 #ax3.pcolor(x_grid, y_grid, bath, cmap="Blues_r", norm=CNorm)
-                s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
+
+                ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
                     cmap="Blues_r",  linewidth=0.01, antialiased=False,
                     norm=CNorm, shade=True, edgecolor='#6183A6')
+                
                 ax2.plot(c_lons, c_lats, np.zeros_like(c_lons))
                 
                 ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
@@ -230,9 +229,10 @@ class CFTrajectory(object):
                 ax2.zaxis.set_ticks(range(-800,100,200))
                 ax2.grid(False)
                 #ax2.set_zlim(-200, 100)
-
-                # Create image
-                for j in range(length):#self.nc.variables['particle'].shape[0]):
+                
+                for j in range(length):
+                    # Each particle
+                    ax2.plot(lon[i:i+3,j], lat[i:i+3,j], depth[i:i+3,j], ':', c='r', linewidth=2, markersize=5, markerfacecolor='r')
                     ax3.plot(lon[:i+3,j], lat[:i+3,j], c='.2',
                          linewidth=.5, markersize=5, markerfacecolor='r',)
                     ax3.scatter(lon[i+2,j], lat[i+2,j], c='r')
@@ -247,24 +247,27 @@ class CFTrajectory(object):
                 #ax2.scatter(lon[i,:], lat[i,:], depth[i,:], zdir='z', c='r')
                 ax2.set_zlim3d(-800,25)
                 
-                fname.append(os.path.join(temp_folder,'%s%04d.png' % (frame_prefix, c)))
-                fig2.savefig(fname[c], dpi=350, bbox_inches='tight')
-                #c += 1
+                image_path = os.path.join(temp_folder,'%s%04d.png' % (frame_prefix, c))
+                fig2.savefig(image_path, dpi=350, bbox_inches='tight')
+                fname.append(image_path)
 
-                del ax2, ax3, ax4, subbox, fig2, s
+                del ax2, ax3, ax4, subbox, fig2
         
         jobs = []
         for i in range(self.nc.variables['time'].shape[0])[:-4:2]:
-            p = multiprocessing.Process(target=render_frame, args=(visual_bbox, c_lons, c_lat, mpl_extent, 
+            p = multiprocessing.Process(target=render_frame, args=(visual_bbox, c_lons, c_lats, mpl_extent, 
                                                                    x_grid, y_grid, bath, stride, view,
                                                                    length, lat, lon, depth, temp_folder,
-                                                                   frame_prefix, c, s)
+                                                                   frame_prefix, c, semo)
                                        )
             p.start()
             jobs.append(p)
             c += 1
         
-        return save_animation(output, fname, frame_prefix=frame_prefix)
+        for j in jobs:
+            j.join(120)
+
+        return save_animation(output, sorted(fname), frame_prefix=frame_prefix)
         
 def save_animation(filename, files, fps=10, codec=None, clear_temp=True, frame_prefix='_tmp'):
 
