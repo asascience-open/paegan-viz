@@ -1,0 +1,19 @@
+
+0.2.0 - 2012-11-14
+===================
+Fix up the animation stuff.  working! (Kyle Wilcox)
+moved semaphore out of the main method (Alexander Crosby)
+added multiprocessing , unable to test yet (Alexander Crosby)
+Changes to the animation generation to reduce memory consumption (Kyle Wilcox)
+Update traj test file with lots of timesteps. (Kyle Wilcox)
+Output .avi files in tests (Kyle Wilcox)
+Add images for trajectory movie testing (Kyle Wilcox)
+Ignore test output directory (Kyle Wilcox)
+Change time format on trajectory movie (Kyle Wilcox)
+Don't generate two pictures for each timestep (Kyle Wilcox)
+Change date format of trajectory output (Kyle Wilcox)
+Update tests to use pytest, write trajectory tests (Kyle Wilcox)
+Use OpenCV for generating the animations (Kyle Wilcox)
+Remove del line that was causing trace import (Kyle Wilcox)
+Fix requirements file (Kyle Wilcox)
+Share the paegan namespace (Kyle Wilcox)
