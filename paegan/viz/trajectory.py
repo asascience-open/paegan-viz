@@ -32,15 +32,8 @@ class CFTrajectory(object):
                     marker='o', c='red') # each particle
 
         visual_bbox = (p_proj_lons.min()-.8, p_proj_lats.min()-.8,
-                       p_proj_lons.max()+.8, p_proj_lats.max()+.8)#tracks.buffer(1).bounds
+                       p_proj_lons.max()+.8, p_proj_lats.max()+.8)
         
-        #coast_line = Shoreline(point=midpoint, spatialbuffer=1.5).linestring
-        #c_lons, c_lats = coast_line.xy
-        #c_lons = np.array(c_lons)
-        #c_lats = np.array(c_lats)
-        #c_lons = np.where((c_lons >= visual_bbox[0]) & (c_lons <= visual_bbox[2]), c_lons, np.nan)
-        #c_lats = np.where((c_lats >= visual_bbox[1]) & (c_lats <= visual_bbox[3]), c_lats, np.nan)
-
         #add bathymetry
         nc1 = netCDF4.Dataset(os.path.normpath(bathy))
         x = nc1.variables['x']
@@ -130,29 +123,7 @@ class CFTrajectory(object):
         CNorm = matplotlib.colors.Normalize(vmin=-400,
                                             vmax=300,
                                             )
-        '''                                   
-        #bath[bath>0] = np.log(bath[bath>0]) * 10                                  
-        s = ax2.plot_surface(x_grid, y_grid, bath, rstride=stride, cstride=stride,
-                cmap="Blues_r",  linewidth=.01, antialiased=False,
-                norm=CNorm, shade=True, edgecolor='#6183A6')
-                
-        ax2.set_xlim3d(visual_bbox[0],visual_bbox[2])
-        ax2.set_ylim3d(visual_bbox[1],visual_bbox[3])
-        ax2.view_init(*view)
-        
-        #ax2.set_zmargin(50)
-        ax2.set_xlabel('Longitude')
-        ax2.set_ylabel('Latitude')
-        ax2.set_zlabel('Depth (m)')
-        #ax2.set_frame_on(False)
-        #ax2.set_position([0,0,1,1])
-        ax2.xaxis.set_ticklabels([])
-        ax2.yaxis.set_ticklabels([])
-        ax2.zaxis.set_ticklabels(['Surface'])
-        ax2.zaxis.set_ticks([0])
-        ax2.grid(False)
-        #ax2.set_zlim(-200, 100)
-        '''
+
         mgr = multiprocessing.Manager()
         fname = mgr.list()
 
