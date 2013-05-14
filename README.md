@@ -8,7 +8,8 @@ Requirements:
   - netcdf
   - matplotlib
   - basemap
-  -paegan
+  - paegan
+  - paegan-transport (for Shoreline)
 
 The animation functions require:
 
