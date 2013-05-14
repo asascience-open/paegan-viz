@@ -76,6 +76,14 @@ class CFTrajectory(object):
     
     def plot_animate(self, output, temp_folder=None, view=(45, -75), bathy=os.path.join(__file__,"../../resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"),
                      frame_prefix='_paegan', extent=None, stride=None, shore_path=None):
+
+        try:
+            os.mkdirs(os.path.dirname(output))
+        except:
+            pass
+
+        if not os.path.exists(os.path.dirname(output)):
+            raise ValueError("Cannot create output directory")
        
         if temp_folder == None:
             temp_folder = os.path.dirname(output)
