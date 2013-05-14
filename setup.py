@@ -17,7 +17,7 @@ class PyTest(Command):
 
 setup(namespace_packages = ['paegan'],
     name                = "paegan-viz",
-    version             = "0.2.0",
+    version             = "0.3.0",
     description         = "Visualization packages for the Paegan library",
     long_description    = readme,
     license             = 'LICENSE.txt',
