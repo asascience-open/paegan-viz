@@ -75,7 +75,7 @@ class CFTrajectory(object):
         fig.savefig('trajectory.png')
     
     def plot_animate(self, output, temp_folder=None, view=(45, -75), bathy=os.path.join(__file__,"../../resources/bathymetry/ETOPO1_Bed_g_gmt4.grd"),
-                     frame_prefix='_paegan', extent=None, stride=None):
+                     frame_prefix='_paegan', extent=None, stride=None, shore_path=None):
        
         if temp_folder == None:
             temp_folder = os.path.dirname(output)
@@ -87,7 +87,7 @@ class CFTrajectory(object):
             visual_bbox = extent
             
         pt = Point(((visual_bbox[2]-visual_bbox[0])/2)+visual_bbox[0],((visual_bbox[3]-visual_bbox[1])/2)+visual_bbox[1])
-        coast_line = Shoreline(point=pt, spatialbuffer=1.5).linestring
+        coast_line = Shoreline(file=shore_path, point=pt, spatialbuffer=1.5).linestring
         c_lons, c_lats = coast_line.xy
         c_lons = np.array(c_lons)
         c_lats = np.array(c_lats)
